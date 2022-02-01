@@ -154,11 +154,11 @@ This example uses a single disk, if you need another set up like mirroring, this
 
 Ignore any errors regarding not being able to mount the filesystem. Compression and other settings will be inherited from the pool.
 
-    zfs create -o encryption=on -o keyformat=passphrase -o mountpoint=none zroot/encr
-    zfs create -o mountpoint=none zroot/encr/data
-    zfs create -o mountpoint=none zroot/encr/ROOT
-    zfs create -o mountpoint=/ zroot/encr/ROOT/default
-    zfs create -o mountpoint=legacy zroot/encr/data/home
+    zfs create -o encryption=on -o keyformat=passphrase -o mountpoint=none zroot/crypt
+    zfs create -o mountpoint=none zroot/crypt/data
+    zfs create -o mountpoint=none zroot/crypt/ROOT
+    zfs create -o mountpoint=/ zroot/crypt/ROOT/default
+    zfs create -o mountpoint=legacy zroot/crypt/data/home
 
 ### Unmount the filesystems:
 
@@ -166,12 +166,12 @@ Ignore any errors regarding not being able to mount the filesystem. Compression 
 
 ### Set bootfs
 
-    zpool set bootfs=zroot/encr/ROOT/default zroot
+    zpool set bootfs=zroot/crypt/ROOT/default zroot
 
 ### Create a swap device:
 
-    zfs create -V 4G -b 4096 -o logbias=throughput -o sync=always -o primarycache=metadata -o com.sun:auto-snapshot=false zroot/encr/swap
-    mkswap -f /dev/zvol/zroot/encr/swap
+    zfs create -V 4G -b 4096 -o logbias=throughput -o sync=always -o primarycache=metadata -o com.sun:auto-snapshot=false zroot/crypt/swap
+    mkswap -f /dev/zvol/zroot/crypt/swap
 
 ### Export and re-import the created zpool:
 
@@ -213,8 +213,8 @@ Our filesystems will be mounted under `/mnt`.
 
 ### Add swap and home entries to fstab
 
-    echo "/dev/zvol/zroot/encr/swap none swap discard 0 0" >> /mnt/etc/fstab
-    echo "zroot/encr/data/home /home zfs rw,xattr,posixacl 0 0" >> /mnt/etc/fstab
+    echo "/dev/zvol/zroot/crypt/swap none swap discard 0 0" >> /mnt/etc/fstab
+    echo "zroot/crypt/data/home /home zfs rw,xattr,posixacl 0 0" >> /mnt/etc/fstab
 
 ### Chroot into our Arch installation
 
@@ -242,7 +242,8 @@ Our filesystems will be mounted under `/mnt`.
 
 ### Set timezone:
 
-    ln -sf /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
+    timedatectl set-timezone America/Los_Angeles
+    test
 
 ### Configure hostname:
 
@@ -277,20 +278,27 @@ Change user to newly created user:
 
     su - jdoe
 
-If you had roblems importing keys in earlier steps, do this first:
+[comment]: <> (If you had roblems importing keys in earlier steps, do this first:)
 
-    gpg --keyserver pool.sks-keyservers.net  --recv-keys C33DF142657ED1F7C328A2960AB9E991C6AF658B
-    gpg --keyserver pool.sks-keyservers.net  --recv-keys 4F3BA9AB6D1F8D683DC2DFB56AD860EED4598027
+[comment]: <> (    gpg --keyserver pool.sks-keyservers.net  --recv-keys C33DF142657ED1F7C328A2960AB9E991C6AF658B)
 
-Build yay and zfs:
+[comment]: <> (    gpg --keyserver pool.sks-keyservers.net  --recv-keys 4F3BA9AB6D1F8D683DC2DFB56AD860EED4598027)
 
-    mkdir git
-    cd git
-    git clone https://aur.archlinux.org/yay.git
-    cd yay
-    makepkg -si --noconfirm
-    yay --noconfirm -S zfs-dkms zfs-utils
-    exit
+[comment]: <> (Build yay and zfs:)
+
+[comment]: <> (    mkdir git)
+
+[comment]: <> (    cd git)
+
+[comment]: <> (    git clone https://aur.archlinux.org/yay.git)
+
+[comment]: <> (    cd yay)
+
+[comment]: <> (    makepkg -si --noconfirm)
+
+[comment]: <> (    yay --noconfirm -S zfs-dkms zfs-utils)
+
+[comment]: <> (    exit)
 
 ### Install and enable networkmanager and ssh:
 
@@ -311,11 +319,11 @@ Find the HOOKS setting in `/etc/mkinitcpio.conf` and update mkinitcpio hooks:
 
     # vim /etc/mkinitcpio.conf
     --------------------------
-    HOOKS=(base udev autodetect modconf keyboard keymap consolefont block zfs filesystems)
+    HOOKS=(base udev autodetect modconf keymap consolefont block zfs filesystems keyboard fsck)
 
 Generate image:
 
-    mkinitcpio -p linux
+    mkinitcpio -P
 
 ## Configure bootloader
 
@@ -338,18 +346,17 @@ Generate image:
     # vim /boot/loader/entries/arch.conf
     ------------------------------------
     title Arch Linux
-    linux /vmlinuz-linux
-    initrd /initramfs-linux.img
+    linux /vmlinuz-linux-zen
+    initrd /initramfs-linux-zen.img
     options zfs=bootfs rw
 
 #### Create fallback boot entry:
 
     # vim /boot/loader/entries/arch-fallback.conf
     title Arch Linux Fallback
-    linux /vmlinuz-linux
-    initrd /initramfs-linux-fallback.img
+    linux /vmlinuz-linux-zen
+    initrd /initramfs-linux-zen-fallback.img
     options zfs=bootfs rw
-
 ### Configure and install the GRUB boot loader ( BIOS only )
 
 #### Install grub
